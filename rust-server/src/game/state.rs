@@ -1,5 +1,5 @@
-use rand::rngs::StdRng;
 use rand::SeedableRng;
+use rand_chacha::ChaCha12Rng;
 
 use crate::config::GameConfig;
 use crate::game::dragon::Dragon;
@@ -26,6 +26,12 @@ pub struct GameMatch {
 }
 
 impl GameMatch {
+    fn chacha_from_seed(seed: u64) -> ChaCha12Rng {
+        let mut seed_bytes = [0u8; 32];
+        seed_bytes[..8].copy_from_slice(&seed.to_le_bytes());
+        ChaCha12Rng::from_seed(seed_bytes)
+    }
+
     /// Create a new match between two players.
     pub fn new(
         p1_id: String,
@@ -38,7 +44,7 @@ impl GameMatch {
         let world = World::generate(seed, config.world_width, config.world_height);
 
         // Use a separate RNG stream for secret placement (items + dragon)
-        let mut rng = StdRng::seed_from_u64(seed.wrapping_add(1));
+        let mut rng = Self::chacha_from_seed(seed.wrapping_add(1));
         let items = world.place_items(&mut rng);
         let (dragon_x, dragon_y) = world.place_dragon(&mut rng);
         let dragon = Dragon::new(dragon_x, dragon_y, config.dragon_hp, config.dragon_damage);

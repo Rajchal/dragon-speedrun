@@ -1,5 +1,5 @@
-use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha12Rng;
 
 use crate::game::items::{Item, ItemSpawn};
 use crate::game::tile::TileType;
@@ -13,11 +13,17 @@ pub struct World {
 }
 
 impl World {
+    fn chacha_from_seed(seed: u64) -> ChaCha12Rng {
+        let mut seed_bytes = [0u8; 32];
+        seed_bytes[..8].copy_from_slice(&seed.to_le_bytes());
+        ChaCha12Rng::from_seed(seed_bytes)
+    }
+
     /// Generate a world deterministically from a seed.
     /// Both the Rust server and the TypeScript client can reproduce
     /// the same tile grid from the same seed using the same algorithm.
     pub fn generate(seed: u64, width: u32, height: u32) -> Self {
-        let mut rng = StdRng::seed_from_u64(seed);
+        let mut rng = Self::chacha_from_seed(seed);
         let mut tiles = vec![vec![TileType::Grass; width as usize]; height as usize];
 
         // --- Water bodies ---
@@ -122,7 +128,7 @@ impl World {
     }
 
     /// Place the three holy items on random walkable tiles, at least 10 tiles from spawn.
-    pub fn place_items(&self, rng: &mut StdRng) -> Vec<ItemSpawn> {
+    pub fn place_items<R: Rng + ?Sized>(&self, rng: &mut R) -> Vec<ItemSpawn> {
         let spawn_x = self.width as i32 / 2;
         let spawn_y = self.height as i32 / 2;
         let mut spawns = Vec::new();
@@ -148,7 +154,7 @@ impl World {
     }
 
     /// Place the dragon on a walkable tile far from spawn (at least 40 tiles).
-    pub fn place_dragon(&self, rng: &mut StdRng) -> (i32, i32) {
+    pub fn place_dragon<R: Rng + ?Sized>(&self, rng: &mut R) -> (i32, i32) {
         let spawn_x = self.width as i32 / 2;
         let spawn_y = self.height as i32 / 2;
         loop {
