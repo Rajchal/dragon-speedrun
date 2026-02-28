@@ -234,8 +234,7 @@ impl World {
             // Keep dragon far from spawn (use center of footprint).
             let center_x = x + size_i / 2;
             let center_y = y + size_i / 2;
-            let dist = (((center_x - spawn_x).pow(2) + (center_y - spawn_y).pow(2)) as f32)
-                .sqrt();
+            let dist = (((center_x - spawn_x).pow(2) + (center_y - spawn_y).pow(2)) as f32).sqrt();
             if dist > 40.0 {
                 return (x, y);
             }
