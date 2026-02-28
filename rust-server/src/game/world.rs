@@ -1,4 +1,4 @@
-use rand::{Rng, SeedableRng};
+use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_chacha::ChaCha12Rng;
 
 use crate::game::items::{Item, ItemSpawn};
@@ -133,20 +133,72 @@ impl World {
         let spawn_y = self.height as i32 / 2;
         let mut spawns = Vec::new();
 
+        // Precompute candidates so we don't loop forever if forests are sparse.
+        let mut forest_candidates = Vec::new();
+        let mut walkable_candidates = Vec::new();
+
+        for y in 0..self.height as i32 {
+            for x in 0..self.width as i32 {
+                let dist2 = (x - spawn_x).pow(2) + (y - spawn_y).pow(2);
+                if dist2 <= 100 {
+                    continue; // keep items away from spawn (dist > 10)
+                }
+                if !self.is_walkable(x, y) {
+                    continue;
+                }
+                walkable_candidates.push((x, y));
+                if self.tiles[y as usize][x as usize] == TileType::Forest {
+                    forest_candidates.push((x, y));
+                }
+            }
+        }
+
+        // Fallback to any walkable tiles if no forests exist (should be rare).
+        let primary = if forest_candidates.is_empty() {
+            &walkable_candidates
+        } else {
+            &forest_candidates
+        };
+
         for item in Item::all() {
-            loop {
-                let x = rng.gen_range(0..self.width as i32);
-                let y = rng.gen_range(0..self.height as i32);
-                let dist = (((x - spawn_x).pow(2) + (y - spawn_y).pow(2)) as f32).sqrt();
-                if self.is_walkable(x, y) && dist > 10.0 {
+            let mut chosen = None;
+
+            // Shuffle view of candidates to vary placement across items.
+            let mut shuffled = primary.clone();
+            shuffled.shuffle(rng);
+
+            for (x, y) in shuffled {
+                let too_close = spawns.iter().any(|s: &ItemSpawn| {
+                    let dx = x - s.x;
+                    let dy = y - s.y;
+                    dx * dx + dy * dy < 25 // keep items at least 5 tiles apart
+                });
+
+                if !too_close {
+                    chosen = Some((x, y));
+                    break;
+                }
+            }
+
+            // If forests were too cramped, fall back to any walkable tile.
+            if chosen.is_none() && primary.len() != walkable_candidates.len() {
+                let mut shuffled = walkable_candidates.clone();
+                shuffled.shuffle(rng);
+                for (x, y) in shuffled {
                     let too_close = spawns.iter().any(|s: &ItemSpawn| {
-                        (((x - s.x).pow(2) + (y - s.y).pow(2)) as f32).sqrt() < 5.0
+                        let dx = x - s.x;
+                        let dy = y - s.y;
+                        dx * dx + dy * dy < 25
                     });
                     if !too_close {
-                        spawns.push(ItemSpawn { item, x, y });
+                        chosen = Some((x, y));
                         break;
                     }
                 }
+            }
+
+            if let Some((x, y)) = chosen {
+                spawns.push(ItemSpawn { item, x, y });
             }
         }
 
