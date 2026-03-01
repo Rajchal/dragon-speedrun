@@ -361,21 +361,24 @@ function sendAttack() {
 
 function onMsg(m: ServerMessage) {
     switch (m.type) {
-        case "Welcome":
-            playerId = m.player_id;
+        case "Welcome": {
+            const msg = m as ServerWelcome;
+            playerId = msg.player_id;
             controls.status.textContent = "Connected";
             showOverlay();
             break;
+        }
         case "WaitingForOpponent":
             controls.status.textContent = "Waiting for opponent…";
             showOverlay();
             break;
         case "MatchStart": {
+            const msg = m as ServerMatchStart;
             resetQueueUi();
             controls.status.textContent = "In match";
             try {
-                if (m.tiles) {
-                    world = parseTiles(m.tiles, m.world_width, m.world_height);
+                if (msg.tiles) {
+                    world = parseTiles(msg.tiles, msg.world_width, msg.world_height);
                 } else {
                     throw new Error("Server did not send tiles");
                 }
@@ -383,9 +386,9 @@ function onMsg(m: ServerMessage) {
                 console.error(err);
                 break;
             }
-            you.x = m.spawn_x;
-            you.y = m.spawn_y;
-            opp = { x: m.spawn_x + 1, y: m.spawn_y, hp: 0, invCount: 0 };
+            you.x = msg.spawn_x;
+            you.y = msg.spawn_y;
+            opp = { x: msg.spawn_x + 1, y: msg.spawn_y, hp: 0, invCount: 0 };
             renderYou.x = you.x;
             renderYou.y = you.y;
             renderOpp.x = opp.x;
@@ -399,21 +402,22 @@ function onMsg(m: ServerMessage) {
             break;
         }
         case "StateUpdate": {
-            you.x = m.your_x;
-            you.y = m.your_y;
-            you.hp = m.your_hp;
-            you.inv = m.your_inventory;
-            opp.x = m.opponent_x;
-            opp.y = m.opponent_y;
-            opp.hp = m.opponent_hp;
-            opp.invCount = m.opponent_item_count;
-            if (m.dragon_visible && m.dragon_x != null && m.dragon_y != null) {
+            const msg = m as ServerStateUpdate;
+            you.x = msg.your_x;
+            you.y = msg.your_y;
+            you.hp = msg.your_hp;
+            you.inv = msg.your_inventory;
+            opp.x = msg.opponent_x;
+            opp.y = msg.opponent_y;
+            opp.hp = msg.opponent_hp;
+            opp.invCount = msg.opponent_item_count;
+            if (msg.dragon_visible && msg.dragon_x != null && msg.dragon_y != null) {
                 dragon = {
-                    x: m.dragon_x,
-                    y: m.dragon_y,
-                    w: m.dragon_width ?? 1,
-                    h: m.dragon_height ?? 1,
-                    hp: m.dragon_hp ?? 0,
+                    x: msg.dragon_x,
+                    y: msg.dragon_y,
+                    w: msg.dragon_width ?? 1,
+                    h: msg.dragon_height ?? 1,
+                    hp: msg.dragon_hp ?? 0,
                 };
             }
             updateState();
@@ -422,30 +426,38 @@ function onMsg(m: ServerMessage) {
         }
         case "ItemPickedUp":
             break;
-        case "DragonRevealed":
-            dragon = { x: m.x, y: m.y, w: m.width, h: m.height, hp: 0 };
+        case "DragonRevealed": {
+            const msg = m as ServerDragonRevealed;
+            dragon = { x: msg.x, y: msg.y, w: msg.width, h: msg.height, hp: 0 };
             draw();
             break;
+        }
         case "AttackResult":
             break;
-        case "MoveDenied":
-            controls.status.textContent = "Blocked: " + m.reason;
+        case "MoveDenied": {
+            const msg = m as ServerMoveDenied;
+            controls.status.textContent = "Blocked: " + msg.reason;
             break;
-        case "MatchEnd":
-            controls.status.textContent = "Winner: " + m.winner;
+        }
+        case "MatchEnd": {
+            const msg = m as ServerMatchEnd;
+            controls.status.textContent = "Winner: " + msg.winner;
             resetQueueUi();
             showOverlay();
             break;
+        }
         case "OpponentDisconnected":
             controls.status.textContent = "Opponent left";
             resetQueueUi();
             showOverlay();
             break;
-        case "Error":
-            controls.status.textContent = m.message;
+        case "Error": {
+            const msg = m as ServerErrorMsg;
+            controls.status.textContent = String(msg.message ?? "Unknown error");
             resetQueueUi();
             showOverlay();
             break;
+        }
         default:
             log("? " + JSON.stringify(m));
     }
