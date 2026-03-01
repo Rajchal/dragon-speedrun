@@ -123,8 +123,8 @@ const controls: Controls = {
     stateGrid: document.getElementById("state-grid")!,
 };
 
-const WORLD_WIDTH = 200;
-const WORLD_HEIGHT = 200;
+const WORLD_WIDTH = 100;
+const WORLD_HEIGHT = 100;
 const VIEWPORT_TILES_X = 40;
 const VIEWPORT_TILES_Y = 22;
 const TILE = 16;
