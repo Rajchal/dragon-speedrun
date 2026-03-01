@@ -191,7 +191,7 @@ let minimapScale = 1;
 function sizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const maxFit = Math.min(window.innerWidth / VIEWPORT_WIDTH_PX, window.innerHeight / VIEWPORT_HEIGHT_PX);
-    renderScale = Math.max(1, Math.min(maxFit, 3)); // cap a bit so it doesn't explode on huge monitors
+    renderScale = Math.max(1, Math.min(Math.floor(maxFit), 3)); // force integer scale to avoid tile seams
 
     // High-DPI backing size for crisp pixels
     controls.canvas.width = Math.round(VIEWPORT_WIDTH_PX * dpr * renderScale);
