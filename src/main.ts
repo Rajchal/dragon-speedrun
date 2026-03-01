@@ -155,6 +155,7 @@ const SPRITE_MAP: Record<TileType, { sx: number; sy: number }> = {
 
 let spriteSheet: HTMLImageElement | null = null;
 let spriteReady = false;
+let renderScale = 1;
 
 function loadSprites() {
     const img = new Image();
@@ -182,23 +183,40 @@ let activeMoveDirection: "Up" | "Down" | "Left" | "Right" | null = null;
 let moveRepeatTimer: number | null = null;
 let isQueueing = false;
 let minimapBase: HTMLCanvasElement | null = null;
+let minimapScale = 1;
 
 // Canvas sizing
 function sizeCanvas() {
-    controls.canvas.width = VIEWPORT_WIDTH_PX;
-    controls.canvas.height = VIEWPORT_HEIGHT_PX;
-    const scale = Math.max(
-        1,
-        Math.floor(Math.min(window.innerWidth / VIEWPORT_WIDTH_PX, window.innerHeight / VIEWPORT_HEIGHT_PX)),
-    );
-    controls.canvas.style.width = `${VIEWPORT_WIDTH_PX * scale}px`;
-    controls.canvas.style.height = `${VIEWPORT_HEIGHT_PX * scale}px`;
+    const dpr = window.devicePixelRatio || 1;
+    const maxFit = Math.min(window.innerWidth / VIEWPORT_WIDTH_PX, window.innerHeight / VIEWPORT_HEIGHT_PX);
+    renderScale = Math.max(1, Math.min(maxFit, 3)); // cap a bit so it doesn't explode on huge monitors
+
+    // High-DPI backing size for crisp pixels
+    controls.canvas.width = Math.round(VIEWPORT_WIDTH_PX * dpr * renderScale);
+    controls.canvas.height = Math.round(VIEWPORT_HEIGHT_PX * dpr * renderScale);
+
+    // CSS size for how large it appears
+    controls.canvas.style.width = `${VIEWPORT_WIDTH_PX * renderScale}px`;
+    controls.canvas.style.height = `${VIEWPORT_HEIGHT_PX * renderScale}px`;
+
+    sizeMinimap();
 }
 window.addEventListener("resize", () => {
     sizeCanvas();
     draw();
 });
 sizeCanvas();
+
+function sizeMinimap() {
+    const dpr = window.devicePixelRatio || 1;
+    minimapScale = renderScale;
+    const baseSize = 200;
+    controls.minimap.width = Math.round(baseSize * dpr * minimapScale);
+    controls.minimap.height = Math.round(baseSize * dpr * minimapScale);
+    controls.minimap.style.width = `${baseSize * minimapScale}px`;
+    controls.minimap.style.height = `${baseSize * minimapScale}px`;
+    minimapBase = null; // force rebuild at new resolution
+}
 
 // Controls
 controls.connectBtn.addEventListener("click", doConnect);
@@ -443,6 +461,8 @@ function draw() {
     const c = controls.canvas;
     const ctx = c.getContext("2d");
     if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(renderScale * dpr, 0, 0, renderScale * dpr, 0, 0);
     const tilesX = VIEWPORT_TILES_X;
     const tilesY = VIEWPORT_TILES_Y;
     renderYou.x += (you.x - renderYou.x) * POS_LERP;
@@ -455,7 +475,7 @@ function draw() {
 
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = "#111";
-    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.fillRect(0, 0, VIEWPORT_WIDTH_PX, VIEWPORT_HEIGHT_PX);
 
     for (let r = 0; r < tilesY; r++) {
         for (let col = 0; col < tilesX; col++) {

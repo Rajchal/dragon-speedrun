@@ -1,7 +1,14 @@
 {
+  "main": "electron-main.js",
+  "scripts": {
+    "build:renderer": "esbuild src/main.ts --bundle --sourcemap --outfile=main.js",
+    "dev": "esbuild src/main.ts --bundle --sourcemap --outfile=main.js --watch",
+    "start": "npm run build:renderer && electron ."
+  },
   "devDependencies": {
     "@types/node": "^25.3.2",
-    "@types/ws": "^8.18.1"
+    "@types/ws": "^8.18.1",
+    "electron": "^40.6.1"
   },
   "dependencies": {
     "esbuild": "^0.27.3",
