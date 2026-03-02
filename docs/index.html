@@ -95,6 +95,10 @@
         }
 
         a.btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
             text-decoration: none;
             color: #061017;
             font-weight: 800;
@@ -117,6 +121,13 @@
             box-shadow: 0 8px 18px rgba(74, 222, 128, 0.25);
         }
 
+        .os-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            flex: 0 0 20px;
+        }
+
         .section-title {
             margin: 0 0 6px;
             font-size: 19px;
@@ -133,6 +144,20 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 14px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        ul.clean {
+            margin: 6px 0 0;
+            padding-left: 18px;
+            color: #c7d8e8;
+            font-size: 13px;
+            line-height: 1.6;
         }
 
         .meta {
@@ -167,6 +192,10 @@
             .about {
                 grid-template-columns: 1fr;
             }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -187,19 +216,48 @@
             </p>
             <div class="downloads">
                 <a class="btn"
-                    href="https://github.com/Rajchal/game-engine-ts/releases/latest/download/Dragon-Speedrun-Setup.exe">Windows
-                    Installer (.exe)</a>
+                    href="https://github.com/Rajchal/game-engine-ts/releases/latest/download/Dragon-Speedrun-Setup.exe">
+                    <img class="os-icon" src="./assets/windows.svg" alt="Windows" />
+                    <span>Windows Installer (.exe)</span>
+                </a>
                 <a class="btn alt"
-                    href="https://github.com/Rajchal/game-engine-ts/releases/latest/download/Dragon-Speedrun-Mac.dmg">macOS
-                    Apple Silicon (.dmg)</a>
+                    href="https://github.com/Rajchal/game-engine-ts/releases/latest/download/Dragon-Speedrun-Mac.dmg">
+                    <img class="os-icon" src="./assets/macos.svg" alt="macOS" />
+                    <span>macOS Apple Silicon (.dmg)</span>
+                </a>
                 <a class="btn"
-                    href="https://github.com/Rajchal/game-engine-ts/releases/latest/download/Dragon-Speedrun-Linux.AppImage">Linux
-                    AppImage</a>
+                    href="https://github.com/Rajchal/game-engine-ts/releases/latest/download/Dragon-Speedrun-Linux.AppImage">
+                    <img class="os-icon" src="./assets/linux.svg" alt="Linux" />
+                    <span>Linux AppImage</span>
+                </a>
                 <a class="btn alt"
-                    href="https://github.com/Rajchal/game-engine-ts/releases/latest/download/Dragon-Speedrun-Linux.deb">Linux
-                    Debian/Ubuntu (.deb)</a>
+                    href="https://github.com/Rajchal/game-engine-ts/releases/latest/download/Dragon-Speedrun-Linux.deb">
+                    <img class="os-icon" src="./assets/linux.svg" alt="Linux" />
+                    <span>Linux Debian/Ubuntu (.deb)</span>
+                </a>
             </div>
             <p class="note">If any file is missing, the release may still be building. Check again in a few minutes.</p>
+        </section>
+
+        <section class="panel info-grid">
+            <div>
+                <h3 class="section-title">How To Install</h3>
+                <ul class="clean">
+                    <li>Download the installer for your OS.</li>
+                    <li>Open it and finish setup.</li>
+                    <li>Launch <strong>Dragon Speedrun</strong>.</li>
+                    <li>Enter your player name and play.</li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="section-title">System Requirements</h3>
+                <ul class="clean">
+                    <li>Windows 10+, macOS 12+, or Ubuntu 20.04+.</li>
+                    <li>64-bit CPU.</li>
+                    <li>At least 4 GB RAM.</li>
+                    <li>Internet connection for multiplayer.</li>
+                </ul>
+            </div>
         </section>
 
         <section class="panel about">
@@ -211,6 +269,8 @@
             <div>
                 <h3 class="section-title">Info</h3>
                 <p class="meta">
+                    Built by: <strong>Rajchal</strong><br />
+                    GitHub: <a href="https://github.com/Rajchal">@Rajchal</a><br />
                     Project: <a href="https://github.com/Rajchal/game-engine-ts">github.com/Rajchal/game-engine-ts</a>
                 </p>
             </div>
