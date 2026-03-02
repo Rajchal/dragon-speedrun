@@ -170,12 +170,11 @@ function advanceAnim(anim: AnimState, moving: boolean, dtMs: number) {
 
 function setAnim(anim: AnimState, dir: Dir, moving: boolean) {
     anim.dir = dir;
-    anim.moving = moving;
     if (moving) {
+        anim.moving = true;
         anim.moveGraceMs = ACTOR_MOVE_GRACE_MS;
     } else {
-        anim.elapsed = 0;
-        anim.moveGraceMs = 0;
+        anim.moving = false;
     }
 }
 

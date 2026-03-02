@@ -11,7 +11,7 @@ export const VIEWPORT_HEIGHT_PX = VIEWPORT_TILES_Y * TILE_PX;
 
 export const MOVE_REPEAT_MS = 120;
 export const ATTACK_COOLDOWN_MS = 120;
-export const POS_LERP = 0.2;
+export const POS_LERP = 0.12;
 
 export const TILE_COLORS: Record<TileType, string> = {
     Grass: "#2d8a4e",
@@ -34,7 +34,7 @@ export const TILE_SPRITE_PATH = "./sprites/tiles.png";
 export const ACTOR_SPRITE_PATH = "./sprites/actors.png";
 export const DRAGON_SPRITE_PATH = "./sprites/dragon.png";
 export const ACTOR_FRAMES = 3;
-export const ACTOR_FRAME_MS = 180;
+export const ACTOR_FRAME_MS = 100;
 export const ACTOR_PINGPONG = true; // smoother 0-1-2-1 cycle
 export const ACTOR_MOVE_GRACE_MS = 140;
 export const ACTOR_DIR_ROW: Record<Dir, number> = {
