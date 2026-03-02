@@ -49,7 +49,7 @@
       "category": "Game",
       "maintainer": "rajchal <rajchal@users.noreply.github.com>",
       "icon": "sprites/icon.png",
-      "artifactName": "Dragon-Speedrun-${os}-${arch}.${ext}"
+      "artifactName": "Dragon-Speedrun-Linux.${ext}"
     },
     "win": {
       "icon": "sprites/icon.ico",
@@ -60,7 +60,7 @@
     },
     "mac": {
       "icon": "sprites/icon.icns",
-      "artifactName": "Dragon-Speedrun-${os}-${arch}.${ext}",
+      "artifactName": "Dragon-Speedrun-Mac.${ext}",
       "target": [
         "dmg"
       ]
