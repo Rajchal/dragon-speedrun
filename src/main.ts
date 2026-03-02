@@ -29,6 +29,8 @@ let playerId: string | null = null;
 let lastAttackAt = 0;
 let activeMoveDirection: Dir | null = null;
 let moveRepeatTimer: number | null = null;
+const heldDirections = new Set<Dir>();
+const directionOrder: Dir[] = [];
 let isQueueing = false;
 let lastFrame = performance.now();
 
@@ -63,7 +65,13 @@ function wireInput() {
         const direction = keyToDirection(e.key);
         if (direction) {
             e.preventDefault();
-            startMoveLoop(direction);
+            if (!heldDirections.has(direction)) {
+                heldDirections.add(direction);
+                const idx = directionOrder.indexOf(direction);
+                if (idx >= 0) directionOrder.splice(idx, 1);
+                directionOrder.push(direction);
+            }
+            syncMoveLoopWithHeldKeys();
             return;
         }
         if (e.key === " ") {
@@ -75,10 +83,15 @@ function wireInput() {
         const direction = keyToDirection(e.key);
         if (direction) {
             e.preventDefault();
-            stopMoveLoop(direction);
+            heldDirections.delete(direction);
+            const idx = directionOrder.indexOf(direction);
+            if (idx >= 0) directionOrder.splice(idx, 1);
+            syncMoveLoopWithHeldKeys();
         }
     });
     window.addEventListener("blur", () => {
+        heldDirections.clear();
+        directionOrder.length = 0;
         stopMoveLoopAll();
     });
 }
@@ -150,11 +163,7 @@ function startMoveLoop(direction: Dir) {
 
 function stopMoveLoop(direction: Dir) {
     if (activeMoveDirection !== direction) return;
-    activeMoveDirection = null;
-    if (moveRepeatTimer != null) {
-        window.clearInterval(moveRepeatTimer);
-        moveRepeatTimer = null;
-    }
+    stopMoveLoopAll();
 }
 
 function stopMoveLoopAll() {
@@ -163,6 +172,25 @@ function stopMoveLoopAll() {
         window.clearInterval(moveRepeatTimer);
         moveRepeatTimer = null;
     }
+}
+
+function syncMoveLoopWithHeldKeys() {
+    let next: Dir | null = null;
+    for (let i = directionOrder.length - 1; i >= 0; i--) {
+        const dir = directionOrder[i];
+        if (heldDirections.has(dir)) {
+            next = dir;
+            break;
+        }
+    }
+
+    if (!next) {
+        stopMoveLoopAll();
+        return;
+    }
+
+    if (activeMoveDirection === next && moveRepeatTimer != null) return;
+    startMoveLoop(next);
 }
 
 function sendAttack() {

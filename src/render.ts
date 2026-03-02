@@ -58,19 +58,25 @@ export function draw(controls: Controls, sprites: SpriteSheets) {
     const tilesX = VIEWPORT_TILES_X;
     const tilesY = VIEWPORT_TILES_Y;
 
-    const camX = Math.floor(gameState.renderYou.x) - Math.floor(tilesX / 2);
-    const camY = Math.floor(gameState.renderYou.y) - Math.floor(tilesY / 2);
+    const camX = gameState.renderYou.x - tilesX / 2;
+    const camY = gameState.renderYou.y - tilesY / 2;
+    const startX = Math.floor(camX);
+    const startY = Math.floor(camY);
+    const offsetX = -(camX - startX) * TILE_PX;
+    const offsetY = -(camY - startY) * TILE_PX;
 
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, VIEWPORT_WIDTH_PX, VIEWPORT_HEIGHT_PX);
 
-    for (let r = 0; r < tilesY; r++) {
-        for (let col = 0; col < tilesX; col++) {
-            const wx = camX + col;
-            const wy = camY + r;
+    for (let r = 0; r <= tilesY; r++) {
+        for (let col = 0; col <= tilesX; col++) {
+            const wx = startX + col;
+            const wy = startY + r;
             if (!gameState.world[0] || wx < 0 || wy < 0 || wy >= gameState.world.length || wx >= gameState.world[0].length)
                 continue;
             const tile = gameState.world[wy][wx];
+            const px = offsetX + col * TILE_PX;
+            const py = offsetY + r * TILE_PX;
             if (sprites.readyTiles && sprites.tiles) {
                 const map = tileSprite(tile);
                 if (map) {
@@ -80,8 +86,8 @@ export function draw(controls: Controls, sprites: SpriteSheets) {
                         map.sy * SPRITE_PX,
                         SPRITE_PX,
                         SPRITE_PX,
-                        col * TILE_PX,
-                        r * TILE_PX,
+                        px,
+                        py,
                         TILE_PX,
                         TILE_PX,
                     );
@@ -89,7 +95,7 @@ export function draw(controls: Controls, sprites: SpriteSheets) {
                 }
             }
             ctx.fillStyle = TILE_COLORS[tile] ?? "#333";
-            ctx.fillRect(col * TILE_PX, r * TILE_PX, TILE_PX, TILE_PX);
+            ctx.fillRect(px, py, TILE_PX, TILE_PX);
         }
     }
 

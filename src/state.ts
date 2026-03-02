@@ -64,8 +64,6 @@ export function applyLocalMove(direction: Dir) {
     gameState.you.x = nx;
     gameState.you.y = ny;
     gameState.you.dir = direction;
-    gameState.renderYou.x = nx;
-    gameState.renderYou.y = ny;
     setAnim(gameState.anim.you, direction, true);
     if (gameState.prev) gameState.prev.you = { x: nx, y: ny };
 }
