@@ -154,7 +154,7 @@ canvas#map {
     width: 140px;
     height: 140px;
     background: rgba(15, 19, 26, 0.35);
-    border: 1px solid rgba(120, 140, 170, 0.35);
+    border: none;
     border-radius: 8px;
     image-rendering: pixelated;
     display: block;
@@ -254,6 +254,20 @@ canvas#map {
     gap: 8px;
 }
 
+.inv-track {
+    display: grid;
+    gap: 4px;
+    justify-items: center;
+}
+
+.inv-label {
+    font-size: 10px;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: #b8d8ff;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
 .inv-slot {
     width: 38px;
     height: 38px;
@@ -274,6 +288,30 @@ canvas#map {
     box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
     filter: none;
     opacity: 1;
+}
+
+.inv-slot.opp.owned {
+    border-color: rgba(250, 204, 21, 0.8);
+    box-shadow: 0 0 12px rgba(250, 204, 21, 0.32);
+}
+
+.inv-slot.blink {
+    animation: slot-blink 420ms ease-out;
+}
+
+@keyframes slot-blink {
+    0% {
+        transform: scale(1);
+        filter: brightness(1.05);
+    }
+    30% {
+        transform: scale(1.12);
+        filter: brightness(1.65);
+    }
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
 }
 
 .hud {

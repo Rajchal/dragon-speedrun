@@ -7,11 +7,13 @@ export interface Controls {
     overlay: HTMLElement;
     canvas: HTMLCanvasElement;
     minimap: HTMLCanvasElement;
-    stateGrid: HTMLElement;
     playerHearts: HTMLElement;
     slotSword: HTMLElement;
     slotArmor: HTMLElement;
     slotMap: HTMLElement;
+    oppSlot1: HTMLElement;
+    oppSlot2: HTMLElement;
+    oppSlot3: HTMLElement;
     dragonHud: HTMLElement;
     dragonHpFill: HTMLElement;
     dragonHpValue: HTMLElement;

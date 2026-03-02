@@ -26,6 +26,7 @@ const ACTOR_DRAW_W = TILE_PX;
 const ACTOR_DRAW_H = 24;
 const ACTOR_HEAD_GAP = ACTOR_DRAW_H - TILE_PX;
 const MINIMAP_BASE_SIZE = 140;
+const MINIMAP_VIEW_TILES = 56;
 
 export function resizeCanvases(controls: Controls) {
     const dpr = window.devicePixelRatio || 1;
@@ -201,54 +202,75 @@ function drawMiniMap(controls: Controls, sprites: SpriteSheets) {
 
     const mw = controls.minimap.width;
     const mh = controls.minimap.height;
-    if (!gameState.minimapBase) buildMinimapBase(mw, mh);
-
-    if (gameState.minimapBase) {
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.drawImage(gameState.minimapBase, 0, 0, mw, mh);
-    } else {
-        ctx.fillStyle = "#0f131a";
-        ctx.fillRect(0, 0, mw, mh);
-    }
-
-    const sx = mw / WORLD_WIDTH;
-    const sy = mh / WORLD_HEIGHT;
-
-    if (gameState.dragon) {
-        ctx.fillStyle = "rgba(239,68,68,0.8)";
-        ctx.fillRect(gameState.dragon.x * sx, gameState.dragon.y * sy, Math.max(1, gameState.dragon.w * sx), Math.max(1, gameState.dragon.h * sy));
-    }
-
-    ctx.fillStyle = "#a855f7";
-    ctx.fillRect(gameState.opp.x * sx, gameState.opp.y * sy, Math.max(2, sx), Math.max(2, sy * 2));
-
-    ctx.fillStyle = "#fbbf24";
-    ctx.fillRect(gameState.you.x * sx, gameState.you.y * sy, Math.max(2, sx), Math.max(2, sy * 2));
-}
-
-function buildMinimapBase(mw: number, mh: number) {
-    if (!gameState.world) return;
-    const base = document.createElement("canvas");
-    base.width = mw;
-    base.height = mh;
-    const ctx = base.getContext("2d");
-    if (!ctx) return;
-    ctx.imageSmoothingEnabled = false;
-
-    const sx = mw / WORLD_WIDTH;
-    const sy = mh / WORLD_HEIGHT;
-    ctx.fillStyle = "#0f131a";
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "rgba(15, 19, 26, 0.35)";
     ctx.fillRect(0, 0, mw, mh);
 
-    for (let y = 0; y < WORLD_HEIGHT; y++) {
-        for (let x = 0; x < WORLD_WIDTH; x++) {
-            const tile = gameState.world[y]?.[x] ?? "Grass";
+    const viewX = MINIMAP_VIEW_TILES;
+    const viewY = MINIMAP_VIEW_TILES;
+    const sx = mw / viewX;
+    const sy = mh / viewY;
+
+    const camX = gameState.you.x - viewX / 2;
+    const camY = gameState.you.y - viewY / 2;
+    const startX = Math.floor(camX);
+    const startY = Math.floor(camY);
+    const fracX = camX - startX;
+    const fracY = camY - startY;
+
+    for (let y = 0; y <= viewY; y++) {
+        for (let x = 0; x <= viewX; x++) {
+            const wx = startX + x;
+            const wy = startY + y;
+            if (wx < 0 || wy < 0 || wy >= WORLD_HEIGHT || wx >= WORLD_WIDTH) continue;
+            const tile = gameState.world[wy]?.[wx] ?? "Grass";
             ctx.fillStyle = TILE_COLORS[tile] ?? "#333";
-            ctx.fillRect(x * sx, y * sy, Math.ceil(sx), Math.ceil(sy));
+            ctx.fillRect((x - fracX) * sx, (y - fracY) * sy, Math.ceil(sx), Math.ceil(sy));
         }
     }
 
-    gameState.minimapBase = base;
+    if (gameState.dragon) {
+        ctx.fillStyle = "rgba(239,68,68,0.8)";
+        ctx.fillRect(
+            (gameState.dragon.x - camX) * sx,
+            (gameState.dragon.y - camY) * sy,
+            Math.max(1, gameState.dragon.w * sx),
+            Math.max(1, gameState.dragon.h * sy),
+        );
+    }
+
+    drawMinimapArrow(
+        ctx,
+        (gameState.opp.x - camX + 0.5) * sx,
+        (gameState.opp.y - camY + 0.5) * sy,
+        gameState.opp.dir,
+        "#a855f7",
+        Math.max(4, Math.min(sx, sy) * 1.2),
+    );
+
+    drawMinimapArrow(
+        ctx,
+        (gameState.you.x - camX + 0.5) * sx,
+        (gameState.you.y - camY + 0.5) * sy,
+        gameState.you.dir,
+        "#fbbf24",
+        Math.max(4, Math.min(sx, sy) * 1.35),
+    );
+}
+
+function drawMinimapArrow(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, color: string, size: number) {
+    const angle = dir === "Up" ? -Math.PI / 2 : dir === "Right" ? 0 : dir === "Down" ? Math.PI / 2 : Math.PI;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(size, 0);
+    ctx.lineTo(-size * 0.7, size * 0.6);
+    ctx.lineTo(-size * 0.7, -size * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
 }
 
 function tileSprite(tile: string) {

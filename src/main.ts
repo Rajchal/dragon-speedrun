@@ -21,11 +21,13 @@ const controls: Controls = {
     overlay: document.getElementById("connect-overlay")!,
     canvas: document.getElementById("map") as HTMLCanvasElement,
     minimap: document.getElementById("minimap") as HTMLCanvasElement,
-    stateGrid: document.getElementById("state-grid")!,
     playerHearts: document.getElementById("player-hearts")!,
     slotSword: document.getElementById("slot-sword")!,
     slotArmor: document.getElementById("slot-armor")!,
     slotMap: document.getElementById("slot-map")!,
+    oppSlot1: document.getElementById("opp-slot-1")!,
+    oppSlot2: document.getElementById("opp-slot-2")!,
+    oppSlot3: document.getElementById("opp-slot-3")!,
     dragonHud: document.getElementById("dragon-hud")!,
     dragonHpFill: document.getElementById("dragon-hp-fill")!,
     dragonHpValue: document.getElementById("dragon-hp-value")!,
@@ -40,6 +42,7 @@ const heldDirections = new Set<Dir>();
 const directionOrder: Dir[] = [];
 let isQueueing = false;
 let lastFrame = performance.now();
+let pickupAudioCtx: AudioContext | null = null;
 
 bootstrap();
 
@@ -243,11 +246,47 @@ function onMsg(m: ServerMessage) {
         }
         case "StateUpdate": {
             const msg = m as Extract<ServerMessage, { type: "StateUpdate" }>;
+            const prevOppCount = gameState.opp.invCount;
+            const prevOwned = {
+                sword: hasInventoryItem("holysword"),
+                armor: hasInventoryItem("holyarmor"),
+                map: hasInventoryItem("dragonmap"),
+            };
             applyStateUpdate(msg);
             updateStatePanel();
+
+            const nowOwned = {
+                sword: hasInventoryItem("holysword"),
+                armor: hasInventoryItem("holyarmor"),
+                map: hasInventoryItem("dragonmap"),
+            };
+
+            let playerPickup = false;
+            if (!prevOwned.sword && nowOwned.sword) {
+                pulseSlot(controls.slotSword);
+                playerPickup = true;
+            }
+            if (!prevOwned.armor && nowOwned.armor) {
+                pulseSlot(controls.slotArmor);
+                playerPickup = true;
+            }
+            if (!prevOwned.map && nowOwned.map) {
+                pulseSlot(controls.slotMap);
+                playerPickup = true;
+            }
+
+            if (gameState.opp.invCount > prevOppCount) {
+                for (let i = prevOppCount; i < Math.min(3, gameState.opp.invCount); i++) {
+                    pulseSlot(opponentSlots()[i]);
+                }
+                playPickupTone(740);
+            }
+
+            if (playerPickup) playPickupTone(880);
             break;
         }
         case "ItemPickedUp":
+            playPickupTone(880);
             break;
         case "DragonRevealed": {
             const msg = m as Extract<ServerMessage, { type: "DragonRevealed" }>;
@@ -294,37 +333,14 @@ function resetQueueUi() {
 
 function updateStatePanel() {
     const youHp = Math.max(0, Math.min(100, gameState.you.hp));
-    const oppHp = Math.max(0, Math.min(100, gameState.opp.hp));
-
-    controls.stateGrid.innerHTML = `
-        <div class="state-title">Adventurer HUD</div>
-        <div class="state-row">
-            <span class="state-key">📍 You</span>
-            <span class="state-val">${gameState.you.x}, ${gameState.you.y}</span>
-        </div>
-        <div class="state-meter-wrap">
-            <div class="state-meter-label"><span>❤️ HP</span><span>${youHp}</span></div>
-            <div class="state-meter"><div class="state-meter-fill you" style="width:${youHp}%"></div></div>
-        </div>
-        <div class="state-divider"></div>
-        <div class="state-row">
-            <span class="state-key">🎯 Rival</span>
-            <span class="state-val">${gameState.opp.x}, ${gameState.opp.y}</span>
-        </div>
-        <div class="state-row">
-            <span class="state-key">🧰 Loot</span>
-            <span class="state-val">${gameState.opp.invCount}</span>
-        </div>
-        <div class="state-meter-wrap">
-            <div class="state-meter-label"><span>💀 Rival HP</span><span>${oppHp}</span></div>
-            <div class="state-meter"><div class="state-meter-fill opp" style="width:${oppHp}%"></div></div>
-        </div>
-    `;
 
     controls.playerHearts.innerHTML = renderHearts(youHp);
     controls.slotSword.classList.toggle("owned", hasInventoryItem("holysword"));
     controls.slotArmor.classList.toggle("owned", hasInventoryItem("holyarmor"));
     controls.slotMap.classList.toggle("owned", hasInventoryItem("dragonmap"));
+
+    const oppCount = Math.max(0, Math.min(3, gameState.opp.invCount));
+    opponentSlots().forEach((slot, idx) => slot.classList.toggle("owned", idx < oppCount));
 
     if (gameState.dragon) {
         const dragonHp = Math.max(0, Math.min(100, gameState.dragon.hp));
@@ -333,6 +349,42 @@ function updateStatePanel() {
         controls.dragonHpValue.textContent = `${dragonHp} / 100`;
     } else {
         controls.dragonHud.classList.add("hidden");
+    }
+}
+
+function opponentSlots() {
+    return [controls.oppSlot1, controls.oppSlot2, controls.oppSlot3];
+}
+
+function pulseSlot(el: HTMLElement) {
+    el.classList.remove("blink");
+    void el.offsetWidth;
+    el.classList.add("blink");
+}
+
+function playPickupTone(freq: number) {
+    try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        if (!pickupAudioCtx) pickupAudioCtx = new AudioCtx();
+        if (pickupAudioCtx.state === "suspended") pickupAudioCtx.resume();
+
+        const osc = pickupAudioCtx.createOscillator();
+        const gain = pickupAudioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = freq;
+
+        const now = pickupAudioCtx.currentTime;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.04, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(pickupAudioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.13);
+    } catch {
+        // Ignore audio errors silently.
     }
 }
 
