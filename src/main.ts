@@ -17,7 +17,7 @@ const DEFAULT_WS_URL = new URLSearchParams(window.location.search).get("ws") || 
 const controls: Controls = {
     nameInput: document.getElementById("player-name") as HTMLInputElement,
     connectBtn: document.getElementById("connect") as HTMLButtonElement,
-    status: document.getElementById("status")!,
+    toastStack: document.getElementById("toast-stack")!,
     overlay: document.getElementById("connect-overlay")!,
     canvas: document.getElementById("map") as HTMLCanvasElement,
     minimap: document.getElementById("minimap") as HTMLCanvasElement,
@@ -43,6 +43,8 @@ const directionOrder: Dir[] = [];
 let isQueueing = false;
 let lastFrame = performance.now();
 let pickupAudioCtx: AudioContext | null = null;
+let activeToastEl: HTMLDivElement | null = null;
+let activeToastTimer: number | null = null;
 
 bootstrap();
 
@@ -124,20 +126,20 @@ function doConnect() {
     if (ws) ws.close();
     showOverlay();
     ws = new WebSocket(url);
-    controls.status.textContent = "Connecting…";
+    showToast("Connecting…", "info");
 
     ws.onopen = () => {
-        controls.status.textContent = "Connected";
+        showToast("Connected", "info");
         showOverlay();
         ws?.send(JSON.stringify({ type: "Join", player_name: name }));
     };
     ws.onclose = ev => {
-        controls.status.textContent = "Disconnected";
+        showToast("Disconnected", "warn");
         resetQueueUi();
         showOverlay();
     };
     ws.onerror = err => {
-        controls.status.textContent = "Error";
+        showToast("Connection error", "error");
         resetQueueUi();
         showOverlay();
     };
@@ -216,18 +218,18 @@ function onMsg(m: ServerMessage) {
         case "Welcome": {
             const msg = m as Extract<ServerMessage, { type: "Welcome" }>;
             playerId = msg.player_id;
-            controls.status.textContent = "Connected";
+            showToast("Connected", "info");
             showOverlay();
             break;
         }
         case "WaitingForOpponent":
-            controls.status.textContent = "Waiting for opponent…";
+            showToast("Waiting for opponent…", "info");
             showOverlay();
             break;
         case "MatchStart": {
             const msg = m as Extract<ServerMessage, { type: "MatchStart" }>;
             resetQueueUi();
-            controls.status.textContent = "In match";
+            showToast("Match started", "info");
             try {
                 if (msg.tiles) {
                     const parsed = parseTiles(msg.tiles, msg.world_width, msg.world_height);
@@ -302,22 +304,22 @@ function onMsg(m: ServerMessage) {
             }
             break;
         case "MoveDenied":
-            controls.status.textContent = "Blocked: " + (m as Extract<ServerMessage, { type: "MoveDenied" }>).reason;
+            showToast("Blocked: " + (m as Extract<ServerMessage, { type: "MoveDenied" }>).reason, "warn");
             break;
         case "MatchEnd":
-            controls.status.textContent = "Winner: " + (m as Extract<ServerMessage, { type: "MatchEnd" }>).winner;
+            showToast("Winner: " + (m as Extract<ServerMessage, { type: "MatchEnd" }>).winner, "info");
             resetQueueUi();
             showOverlay();
             break;
         case "OpponentDisconnected":
-            controls.status.textContent = "Opponent left";
+            showToast("Opponent left", "warn");
             resetQueueUi();
             showOverlay();
             break;
         case "Error": {
             const msg = m as Extract<ServerMessage, { type: "Error" }>;
             // Stay in the match; just surface the message.
-            controls.status.textContent = msg.message;
+            showToast(msg.message, "error");
             break;
         }
         default:
@@ -403,6 +405,23 @@ function renderHearts(hp: number) {
 
 function hasInventoryItem(key: string) {
     return (gameState.you.inv || []).some(item => item.toLowerCase().replace(/[^a-z]/g, "").includes(key));
+}
+
+function showToast(message: string, kind: "info" | "warn" | "error" = "info") {
+    if (!activeToastEl) {
+        activeToastEl = document.createElement("div");
+        controls.toastStack.appendChild(activeToastEl);
+    }
+
+    activeToastEl.className = `toast ${kind}`;
+    activeToastEl.textContent = message;
+    activeToastEl.classList.remove("out");
+
+    if (activeToastTimer != null) window.clearTimeout(activeToastTimer);
+    activeToastTimer = window.setTimeout(() => {
+        if (!activeToastEl) return;
+        activeToastEl.classList.add("out");
+    }, 2200);
 }
 
 function showOverlay() {

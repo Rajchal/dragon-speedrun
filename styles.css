@@ -12,7 +12,7 @@ body {
 
 body {
     font-family: Arial, sans-serif;
-    background: #0f1115;
+    background: #8fcab9;
     color: #e8ecf1;
     position: fixed;
     inset: 0;
@@ -21,7 +21,7 @@ body {
 .screen {
     position: fixed;
     inset: 0;
-    background: #0b0d11;
+    background: #8fcab9;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -43,9 +43,9 @@ canvas#map {
     width: 640px;
     height: 352px;
     display: block;
-    background: #0b0d11;
+    background: #8fcab9;
     image-rendering: pixelated;
-    border: 1px solid #1f2430;
+    border: none;
 }
 
 .side-panel {
@@ -171,7 +171,7 @@ canvas#map {
     transform: translateX(-50%);
     width: min(360px, 56vw);
     background: linear-gradient(180deg, rgba(37, 10, 10, 0.82) 0%, rgba(20, 8, 12, 0.82) 100%);
-    border: 1px solid rgba(244, 114, 114, 0.55);
+    border: none;
     border-radius: 10px;
     padding: 6px 10px 8px;
     z-index: 12;
@@ -192,7 +192,7 @@ canvas#map {
     border-radius: 999px;
     overflow: hidden;
     background: rgba(9, 5, 6, 0.8);
-    border: 1px solid rgba(248, 113, 113, 0.45);
+    border: none;
 }
 
 .dragon-hp-fill {
@@ -227,7 +227,7 @@ canvas#map {
     padding: 5px 8px;
     border-radius: 8px;
     background: rgba(10, 8, 16, 0.55);
-    border: 1px solid rgba(180, 147, 255, 0.35);
+    border: none;
 }
 
 .heart {
@@ -276,7 +276,7 @@ canvas#map {
     place-items: center;
     font-size: 20px;
     background: linear-gradient(180deg, rgba(12, 14, 24, 0.78) 0%, rgba(10, 11, 16, 0.78) 100%);
-    border: 1px solid rgba(141, 154, 196, 0.35);
+    border: none;
     color: #5c647f;
     filter: grayscale(1);
     opacity: 0.55;
@@ -284,14 +284,12 @@ canvas#map {
 
 .inv-slot.owned {
     color: #e7f0ff;
-    border-color: rgba(125, 211, 252, 0.8);
     box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
     filter: none;
     opacity: 1;
 }
 
 .inv-slot.opp.owned {
-    border-color: rgba(250, 204, 21, 0.8);
     box-shadow: 0 0 12px rgba(250, 204, 21, 0.32);
 }
 
@@ -304,32 +302,56 @@ canvas#map {
         transform: scale(1);
         filter: brightness(1.05);
     }
+
     30% {
         transform: scale(1.12);
         filter: brightness(1.65);
     }
+
     100% {
         transform: scale(1);
         filter: brightness(1);
     }
 }
 
-.hud {
+.toast-stack {
     position: absolute;
     top: 12px;
     left: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 10;
+    display: grid;
+    gap: 6px;
+    z-index: 30;
+    pointer-events: none;
 }
 
-.status {
-    padding: 6px 10px;
+.toast {
+    padding: 8px 12px;
     border-radius: 12px;
-    background: rgba(28, 32, 41, 0.55);
-    font-size: 12px;
-    border: 1px solid rgba(120, 140, 170, 0.35);
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+    border: none;
+    background: linear-gradient(180deg, rgba(17, 24, 39, 0.92) 0%, rgba(15, 23, 42, 0.92) 100%);
+    color: #e0f2fe;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 180ms ease, transform 180ms ease;
+    box-shadow: 0 10px 20px rgba(2, 6, 23, 0.4);
+}
+
+.toast.warn {
+    background: linear-gradient(180deg, rgba(113, 63, 18, 0.9) 0%, rgba(120, 53, 15, 0.9) 100%);
+    color: #fef3c7;
+}
+
+.toast.error {
+    background: linear-gradient(180deg, rgba(127, 29, 29, 0.92) 0%, rgba(153, 27, 27, 0.92) 100%);
+    color: #fee2e2;
+}
+
+.toast.out {
+    opacity: 0;
+    transform: translateY(-4px);
 }
 
 .controls {

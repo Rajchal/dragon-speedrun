@@ -31,7 +31,7 @@ const MINIMAP_VIEW_TILES = 56;
 export function resizeCanvases(controls: Controls) {
     const dpr = window.devicePixelRatio || 1;
     const maxFit = Math.min(window.innerWidth / VIEWPORT_WIDTH_PX, window.innerHeight / VIEWPORT_HEIGHT_PX);
-    renderScale = Math.max(1, Math.min(Math.floor(maxFit), 3));
+    renderScale = Math.max(1, Math.min(maxFit, 4));
 
     controls.canvas.width = Math.round(VIEWPORT_WIDTH_PX * dpr * renderScale);
     controls.canvas.height = Math.round(VIEWPORT_HEIGHT_PX * dpr * renderScale);
