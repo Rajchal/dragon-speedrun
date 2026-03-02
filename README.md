@@ -31,6 +31,20 @@ git push origin v1.0.0
 
 Users can then download installers directly from the Releases page.
 
+## Static download page (GitHub Pages)
+
+A static page is included at `docs/index.html` with one-click links to latest installers.
+
+Enable Pages:
+
+1. GitHub repo → Settings → Pages
+2. Source: `Deploy from a branch`
+3. Branch: `main` / folder: `docs`
+
+Then share:
+
+`https://rajchal.github.io/game-engine-ts/`
+
 ## Set websocket server URL in app build/runtime
 
 The app reads websocket URL from `WS_URL` in Electron main process.

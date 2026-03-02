@@ -48,16 +48,19 @@
       ],
       "category": "Game",
       "maintainer": "rajchal <rajchal@users.noreply.github.com>",
-      "icon": "sprites/icon.png"
+      "icon": "sprites/icon.png",
+      "artifactName": "Dragon-Speedrun-${os}-${arch}.${ext}"
     },
     "win": {
       "icon": "sprites/icon.ico",
+      "artifactName": "Dragon-Speedrun-Setup.${ext}",
       "target": [
         "nsis"
       ]
     },
     "mac": {
       "icon": "sprites/icon.icns",
+      "artifactName": "Dragon-Speedrun-${os}-${arch}.${ext}",
       "target": [
         "dmg"
       ]
