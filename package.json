@@ -47,14 +47,17 @@
         "deb"
       ],
       "category": "Game",
-      "maintainer": "rajchal <rajchal@users.noreply.github.com>"
+      "maintainer": "rajchal <rajchal@users.noreply.github.com>",
+      "icon": "sprites/icon.png"
     },
     "win": {
+      "icon": "sprites/icon.ico",
       "target": [
         "nsis"
       ]
     },
     "mac": {
+      "icon": "sprites/icon.icns",
       "target": [
         "dmg"
       ]
