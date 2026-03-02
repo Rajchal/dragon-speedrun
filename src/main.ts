@@ -175,21 +175,24 @@ function sendAttack() {
 
 function onMsg(m: ServerMessage) {
     switch (m.type) {
-        case "Welcome":
-            playerId = m.player_id;
+        case "Welcome": {
+            const msg = m as Extract<ServerMessage, { type: "Welcome" }>;
+            playerId = msg.player_id;
             controls.status.textContent = "Connected";
             showOverlay();
             break;
+        }
         case "WaitingForOpponent":
             controls.status.textContent = "Waiting for opponent…";
             showOverlay();
             break;
         case "MatchStart": {
+            const msg = m as Extract<ServerMessage, { type: "MatchStart" }>;
             resetQueueUi();
             controls.status.textContent = "In match";
             try {
-                if (m.tiles) {
-                    const parsed = parseTiles(m.tiles, m.world_width, m.world_height);
+                if (msg.tiles) {
+                    const parsed = parseTiles(msg.tiles, msg.world_width, msg.world_height);
                     setWorld(parsed);
                 } else {
                     throw new Error("Server did not send tiles");
@@ -198,28 +201,31 @@ function onMsg(m: ServerMessage) {
                 console.error(err);
                 break;
             }
-            resetForMatch(m.spawn_x, m.spawn_y);
+            resetForMatch(msg.spawn_x, msg.spawn_y);
             hideOverlay();
             updateStatePanel();
             break;
         }
         case "StateUpdate": {
-            applyStateUpdate(m);
+            const msg = m as Extract<ServerMessage, { type: "StateUpdate" }>;
+            applyStateUpdate(msg);
             updateStatePanel();
             break;
         }
         case "ItemPickedUp":
             break;
-        case "DragonRevealed":
-            gameState.dragon = { x: m.x, y: m.y, w: m.width, h: m.height, hp: 0 };
+        case "DragonRevealed": {
+            const msg = m as Extract<ServerMessage, { type: "DragonRevealed" }>;
+            gameState.dragon = { x: msg.x, y: msg.y, w: msg.width, h: msg.height, hp: 0 };
             break;
+        }
         case "AttackResult":
             break;
         case "MoveDenied":
-            controls.status.textContent = "Blocked: " + m.reason;
+            controls.status.textContent = "Blocked: " + (m as Extract<ServerMessage, { type: "MoveDenied" }>).reason;
             break;
         case "MatchEnd":
-            controls.status.textContent = "Winner: " + m.winner;
+            controls.status.textContent = "Winner: " + (m as Extract<ServerMessage, { type: "MatchEnd" }>).winner;
             resetQueueUi();
             showOverlay();
             break;
@@ -228,10 +234,12 @@ function onMsg(m: ServerMessage) {
             resetQueueUi();
             showOverlay();
             break;
-        case "Error":
+        case "Error": {
+            const msg = m as Extract<ServerMessage, { type: "Error" }>;
             // Stay in the match; just surface the message.
-            controls.status.textContent = m.message;
+            controls.status.textContent = msg.message;
             break;
+        }
         default:
             console.log("?", m);
     }
