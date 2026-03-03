@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dragon Speedrun Client</title>
+  <link rel="icon" href="sprites/icon.ico" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -42,16 +43,41 @@
     </div>
 
     <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
-    <div class="overlay" id="connect-overlay">
-      <div class="card">
-        <h1>Dragon Speedrun</h1>
-        <p id="match-result" class="hint hidden"></p>
-        <label>
-          Name
-          <input id="player-name" type="text" placeholder="Your name" />
-        </label>
-        <button id="connect">Enter Queue</button>
-        <p class="hint">You will be matched when a second player joins.</p>
+    <div class="overlay overlay-scene" id="connect-overlay">
+      <div class="scene-panel">
+        <div class="scene-art" aria-hidden="true">
+          <img src="sprites/dragonslayer.png" alt="" class="scene-hero-image" />
+          <div class="scene-art-gradient"></div>
+        </div>
+        <div class="scene-content">
+          <div class="scene-header-art" aria-hidden="true">
+            <img src="sprites/icon.ico" alt="" class="scene-icon" />
+
+          </div>
+          <h1>Dragon Speedrun</h1>
+          <p class="scene-subtitle">Enter your name and begin the hunt.</p>
+          <p id="match-result" class="hint hidden"></p>
+          <label>
+            Summoner Name
+            <input id="player-name" type="text" placeholder="Your name" />
+          </label>
+          <button id="connect">Enter Queue</button>
+          <p id="queue-timer" class="queue-timer hidden">Queue Time 00:00</p>
+          <p class="hint">You will be matched when a second player joins.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="victory-overlay" class="overlay victory-overlay hidden" aria-live="polite">
+      <div class="victory-backdrop"></div>
+      <div class="victory-card">
+        <div class="victory-image-wrap" aria-hidden="true">
+          <img src="sprites/dragonslayer2.png" alt="" class="victory-image" />
+          <div class="victory-image-tint"></div>
+        </div>
+        <div id="victory-label" class="victory-label">VICTORY</div>
+        <p id="victory-subtitle" class="victory-subtitle">The Rift is yours.</p>
+        <button id="victory-continue" class="victory-continue">Continue</button>
       </div>
     </div>
   </div>

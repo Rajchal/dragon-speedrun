@@ -3,9 +3,14 @@ import { Dir, TileType } from "./constants";
 export interface Controls {
     nameInput: HTMLInputElement;
     connectBtn: HTMLButtonElement;
+    queueTimer: HTMLElement;
     matchResult: HTMLElement;
     toastStack: HTMLElement;
     overlay: HTMLElement;
+    victoryOverlay: HTMLElement;
+    victoryLabel: HTMLElement;
+    victorySubtitle: HTMLElement;
+    victoryContinueBtn: HTMLButtonElement;
     canvas: HTMLCanvasElement;
     minimap: HTMLCanvasElement;
     playerHearts: HTMLElement;

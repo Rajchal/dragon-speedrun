@@ -7,6 +7,7 @@ function createWindow() {
     const win = new BrowserWindow({
         width: 1200,
         height: 800,
+        fullscreen: true,
         icon: iconPath,
         autoHideMenuBar: true,
         webPreferences: {
@@ -17,6 +18,7 @@ function createWindow() {
     });
 
     win.once("ready-to-show", () => {
+        win.setFullScreen(true);
         win.show();
     });
 

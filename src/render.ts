@@ -27,6 +27,16 @@ const ACTOR_DRAW_H = 24;
 const ACTOR_HEAD_GAP = ACTOR_DRAW_H - TILE_PX;
 const MINIMAP_BASE_SIZE = 140;
 const MINIMAP_VIEW_TILES = 56;
+let localPlayerLabel = "Player";
+let opponentPlayerLabel = "Opponent";
+
+export function setLocalPlayerLabel(name: string) {
+    localPlayerLabel = (name || "Player").trim() || "Player";
+}
+
+export function setOpponentPlayerLabel(name: string) {
+    opponentPlayerLabel = (name || "Opponent").trim() || "Opponent";
+}
 
 export function resizeCanvases(controls: Controls) {
     const dpr = window.devicePixelRatio || 1;
@@ -123,11 +133,65 @@ export function draw(controls: Controls, sprites: SpriteSheets) {
     drawOpponent(ctx, sprites, camX, camY);
     drawYou(ctx, sprites, camX, camY);
 
-    ctx.font = "10px sans-serif";
-    ctx.fillStyle = "#fff";
-    ctx.fillText("YOU", (gameState.renderYou.x - camX) * TILE_PX, (gameState.renderYou.y - camY) * TILE_PX - TILE_PX - 2);
+    drawNameTag(
+        ctx,
+        localPlayerLabel,
+        (gameState.renderYou.x - camX) * TILE_PX + TILE_PX / 2,
+        (gameState.renderYou.y - camY) * TILE_PX - ACTOR_HEAD_GAP - 7,
+        "#0e7490",
+        "#082f49",
+        "#67e8f9",
+    );
+
+    drawNameTag(
+        ctx,
+        opponentPlayerLabel,
+        (gameState.renderOpp.x - camX) * TILE_PX + TILE_PX / 2,
+        (gameState.renderOpp.y - camY) * TILE_PX - ACTOR_HEAD_GAP - 7,
+        "#7c3aed",
+        "#3b0764",
+        "#f3e8ff",
+    );
 
     drawMiniMap(controls, sprites);
+}
+
+function drawNameTag(
+    ctx: CanvasRenderingContext2D,
+    label: string,
+    centerX: number,
+    anchorY: number,
+    bg: string,
+    border: string,
+    fg: string,
+) {
+    const safe = label.slice(0, 14).toUpperCase();
+    ctx.save();
+    ctx.font = "700 9px 'Courier New', monospace";
+    const textW = Math.ceil(ctx.measureText(safe).width);
+    const padX = 5;
+    const w = textW + padX * 2;
+    const h = 13;
+    const x = Math.round(centerX - w / 2);
+    const y = Math.round(anchorY - h);
+
+    ctx.fillStyle = "rgba(2,6,23,0.35)";
+    ctx.fillRect(x + 1, y + 1, w, h);
+    ctx.fillStyle = bg;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+    ctx.fillStyle = border;
+    ctx.fillRect(Math.round(centerX - 2), y + h - 1, 4, 2);
+    ctx.fillRect(Math.round(centerX - 1), y + h + 1, 2, 1);
+
+    ctx.fillStyle = fg;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(safe, Math.round(centerX), y + h / 2 + 0.5);
+    ctx.restore();
 }
 
 function currentDragonFrame() {

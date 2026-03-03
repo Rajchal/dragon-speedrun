@@ -8,7 +8,7 @@ import {
     WORLD_HEIGHT,
     WORLD_WIDTH,
 } from "./constants";
-import { draw, resizeCanvases } from "./render";
+import { draw, resizeCanvases, setLocalPlayerLabel, setOpponentPlayerLabel } from "./render";
 import { loadSprites, spriteSheets } from "./sprites";
 import { applyStateUpdate, gameState, resetForMatch, setWorld, tickState } from "./state";
 import { Controls, ServerMessage } from "./types";
@@ -18,9 +18,14 @@ const DEFAULT_WS_URL = new URLSearchParams(window.location.search).get("ws") || 
 const controls: Controls = {
     nameInput: document.getElementById("player-name") as HTMLInputElement,
     connectBtn: document.getElementById("connect") as HTMLButtonElement,
+    queueTimer: document.getElementById("queue-timer")!,
     matchResult: document.getElementById("match-result")!,
     toastStack: document.getElementById("toast-stack")!,
     overlay: document.getElementById("connect-overlay")!,
+    victoryOverlay: document.getElementById("victory-overlay")!,
+    victoryLabel: document.getElementById("victory-label")!,
+    victorySubtitle: document.getElementById("victory-subtitle")!,
+    victoryContinueBtn: document.getElementById("victory-continue") as HTMLButtonElement,
     canvas: document.getElementById("map") as HTMLCanvasElement,
     minimap: document.getElementById("minimap") as HTMLCanvasElement,
     playerHearts: document.getElementById("player-hearts")!,
@@ -47,6 +52,10 @@ let lastFrame = performance.now();
 let pickupAudioCtx: AudioContext | null = null;
 let activeToastEl: HTMLDivElement | null = null;
 let activeToastTimer: number | null = null;
+let currentPlayerName = "";
+let queueStartAt: number | null = null;
+let queueTimerId: number | null = null;
+let dragonThemeLoopId: number | null = null;
 
 bootstrap();
 
@@ -58,6 +67,10 @@ function bootstrap() {
     });
 
     controls.connectBtn.addEventListener("click", doConnect);
+    controls.victoryContinueBtn.addEventListener("click", () => {
+        hideVictoryOverlay();
+        showOverlay();
+    });
     wireInput();
     loadSprites(() => draw(controls, spriteSheets));
     showOverlay();
@@ -124,10 +137,15 @@ function doConnect() {
     if (isQueueing) return;
     const url = DEFAULT_WS_URL;
     const name = controls.nameInput.value.trim() || "Player";
+    currentPlayerName = name;
+    setLocalPlayerLabel(name);
+    setOpponentPlayerLabel("Opponent");
     isQueueing = true;
     controls.connectBtn.disabled = true;
     controls.connectBtn.textContent = "Joining...";
+    startQueueTimer();
     setMatchResult("");
+    hideVictoryOverlay();
     if (ws) ws.close();
     showOverlay();
     ws = new WebSocket(url);
@@ -139,11 +157,13 @@ function doConnect() {
         ws?.send(JSON.stringify({ type: "Join", player_name: name }));
     };
     ws.onclose = ev => {
+        stopDragonThemeLoop();
         showToast("Disconnected", "warn");
         resetQueueUi();
         showOverlay();
     };
     ws.onerror = err => {
+        stopDragonThemeLoop();
         showToast("Connection error", "error");
         resetQueueUi();
         showOverlay();
@@ -234,6 +254,8 @@ function onMsg(m: ServerMessage) {
             break;
         case "MatchStart": {
             const msg = m as Extract<ServerMessage, { type: "MatchStart" }>;
+            setOpponentPlayerLabel(msg.opponent_name || "Opponent");
+            stopDragonThemeLoop();
             resetQueueUi();
             showToast("Match started", "info");
             try {
@@ -249,6 +271,8 @@ function onMsg(m: ServerMessage) {
             }
             resetForMatch(msg.spawn_x, msg.spawn_y);
             setMatchResult("");
+            hideVictoryOverlay();
+            playGameStartTheme();
             hideOverlay();
             updateStatePanel();
             break;
@@ -263,6 +287,12 @@ function onMsg(m: ServerMessage) {
             };
             applyStateUpdate(msg);
             updateStatePanel();
+
+            if (msg.dragon_visible || gameState.dragon) {
+                startDragonThemeLoop();
+            } else {
+                stopDragonThemeLoop();
+            }
 
             const nowOwned = {
                 sword: hasInventoryItem("holysword"),
@@ -300,6 +330,7 @@ function onMsg(m: ServerMessage) {
         case "DragonRevealed": {
             const msg = m as Extract<ServerMessage, { type: "DragonRevealed" }>;
             gameState.dragon = { x: msg.x, y: msg.y, w: msg.width, h: msg.height, hp: 0 };
+            startDragonThemeLoop();
             break;
         }
         case "AttackResult":
@@ -307,6 +338,7 @@ function onMsg(m: ServerMessage) {
                 const msg = m as Extract<ServerMessage, { type: "AttackResult" }>;
                 gameState.you.hp = msg.your_hp;
                 if (gameState.dragon) gameState.dragon.hp = Math.max(0, msg.dragon_hp);
+                if (msg.dragon_hp <= 0) stopDragonThemeLoop();
                 updateStatePanel();
             }
             break;
@@ -316,13 +348,14 @@ function onMsg(m: ServerMessage) {
         case "MatchEnd":
             {
                 const winner = (m as Extract<ServerMessage, { type: "MatchEnd" }>).winner;
+                stopDragonThemeLoop();
                 showToast("Winner: " + winner, "info");
-                setMatchResult(`Match over • Winner: ${winner}`);
+                showWinnerOverlay(winner);
             }
             resetQueueUi();
-            showOverlay();
             break;
         case "OpponentDisconnected":
+            stopDragonThemeLoop();
             showToast("Opponent left", "warn");
             setMatchResult("Match ended • Opponent disconnected");
             resetQueueUi();
@@ -344,6 +377,35 @@ function resetQueueUi() {
     isQueueing = false;
     controls.connectBtn.disabled = false;
     controls.connectBtn.textContent = "Enter Queue";
+    stopQueueTimer();
+}
+
+function startQueueTimer() {
+    queueStartAt = performance.now();
+    controls.queueTimer.classList.remove("hidden");
+    updateQueueTimerText();
+    if (queueTimerId != null) window.clearInterval(queueTimerId);
+    queueTimerId = window.setInterval(updateQueueTimerText, 1000);
+}
+
+function stopQueueTimer() {
+    if (queueTimerId != null) {
+        window.clearInterval(queueTimerId);
+        queueTimerId = null;
+    }
+    queueStartAt = null;
+    controls.queueTimer.classList.add("hidden");
+    controls.queueTimer.textContent = "Queue Time 00:00";
+}
+
+function updateQueueTimerText() {
+    if (queueStartAt == null) return;
+    const elapsedSec = Math.floor((performance.now() - queueStartAt) / 1000);
+    const mins = Math.floor(elapsedSec / 60)
+        .toString()
+        .padStart(2, "0");
+    const secs = (elapsedSec % 60).toString().padStart(2, "0");
+    controls.queueTimer.textContent = `Queue Time ${mins}:${secs}`;
 }
 
 function updateStatePanel() {
@@ -404,6 +466,178 @@ function playPickupTone(freq: number) {
     }
 }
 
+function playGameStartTheme() {
+    try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        if (!pickupAudioCtx) pickupAudioCtx = new AudioCtx();
+        if (pickupAudioCtx.state === "suspended") pickupAudioCtx.resume();
+
+        const notes = [392, 523.25, 659.25, 783.99, 659.25, 523.25, 880, 987.77];
+        const start = pickupAudioCtx.currentTime + 0.02;
+
+        notes.forEach((frequency, index) => {
+            const t = start + index * 0.14;
+            const osc = pickupAudioCtx!.createOscillator();
+            const gain = pickupAudioCtx!.createGain();
+
+            osc.type = index % 2 === 0 ? "square" : "triangle";
+            osc.frequency.setValueAtTime(frequency, t);
+
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.045, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+
+            osc.connect(gain);
+            gain.connect(pickupAudioCtx!.destination);
+            osc.start(t);
+            osc.stop(t + 0.14);
+        });
+    } catch {
+        // Ignore audio errors silently.
+    }
+}
+
+function playDragonSpawnTheme() {
+    try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        if (!pickupAudioCtx) pickupAudioCtx = new AudioCtx();
+        if (pickupAudioCtx.state === "suspended") pickupAudioCtx.resume();
+
+        const now = pickupAudioCtx.currentTime + 0.02;
+
+        const drone = pickupAudioCtx.createOscillator();
+        const droneGain = pickupAudioCtx.createGain();
+        drone.type = "sawtooth";
+        drone.frequency.setValueAtTime(55.0, now);
+        drone.frequency.linearRampToValueAtTime(61.74, now + 3.8);
+        droneGain.gain.setValueAtTime(0.0001, now);
+        droneGain.gain.exponentialRampToValueAtTime(0.026, now + 0.35);
+        droneGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.9);
+        drone.connect(droneGain);
+        droneGain.connect(pickupAudioCtx.destination);
+        drone.start(now);
+        drone.stop(now + 3.92);
+
+        const bassline = [82.41, 82.41, 92.5, 98.0, 82.41, 73.42, 87.31, 98.0];
+        bassline.forEach((frequency, index) => {
+            const t = now + index * 0.46;
+            const osc = pickupAudioCtx!.createOscillator();
+            const gain = pickupAudioCtx!.createGain();
+            osc.type = "square";
+            osc.frequency.setValueAtTime(frequency, t);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.04, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+            osc.connect(gain);
+            gain.connect(pickupAudioCtx!.destination);
+            osc.start(t);
+            osc.stop(t + 0.25);
+        });
+
+        const leadA = [130.81, 146.83, 164.81, 196.0, 220.0, 196.0, 164.81, 246.94];
+        leadA.forEach((frequency, index) => {
+            const t = now + 0.12 + index * 0.23;
+            const osc = pickupAudioCtx!.createOscillator();
+            const gain = pickupAudioCtx!.createGain();
+            osc.type = index % 3 === 0 ? "sawtooth" : "triangle";
+            osc.frequency.setValueAtTime(frequency, t);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.055, t + 0.025);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+            osc.connect(gain);
+            gain.connect(pickupAudioCtx!.destination);
+            osc.start(t);
+            osc.stop(t + 0.2);
+        });
+
+        const leadB = [196.0, 220.0, 261.63, 293.66, 329.63, 293.66];
+        leadB.forEach((frequency, index) => {
+            const t = now + 2.08 + index * 0.24;
+            const osc = pickupAudioCtx!.createOscillator();
+            const gain = pickupAudioCtx!.createGain();
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(frequency, t);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.062, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+            osc.connect(gain);
+            gain.connect(pickupAudioCtx!.destination);
+            osc.start(t);
+            osc.stop(t + 0.21);
+        });
+
+        const hits = [0.0, 0.92, 1.84, 2.76, 3.45];
+        hits.forEach(offset => {
+            const t = now + offset;
+            const osc = pickupAudioCtx!.createOscillator();
+            const gain = pickupAudioCtx!.createGain();
+            osc.type = "square";
+            osc.frequency.setValueAtTime(46.25, t);
+            osc.frequency.exponentialRampToValueAtTime(36.71, t + 0.07);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.07, t + 0.008);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+            osc.connect(gain);
+            gain.connect(pickupAudioCtx!.destination);
+            osc.start(t);
+            osc.stop(t + 0.1);
+        });
+    } catch {
+        // Ignore audio errors silently.
+    }
+}
+
+function startDragonThemeLoop() {
+    if (dragonThemeLoopId != null) return;
+    playDragonSpawnTheme();
+    dragonThemeLoopId = window.setInterval(() => {
+        playDragonSpawnTheme();
+    }, 4000);
+}
+
+function stopDragonThemeLoop() {
+    if (dragonThemeLoopId != null) {
+        window.clearInterval(dragonThemeLoopId);
+        dragonThemeLoopId = null;
+    }
+}
+
+function playMatchEndTheme(victory: boolean) {
+    try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        if (!pickupAudioCtx) pickupAudioCtx = new AudioCtx();
+        if (pickupAudioCtx.state === "suspended") pickupAudioCtx.resume();
+
+        const seq = victory
+            ? [523.25, 659.25, 783.99, 1046.5]
+            : [329.63, 293.66, 246.94, 196.0];
+        const start = pickupAudioCtx.currentTime + 0.015;
+
+        seq.forEach((frequency, index) => {
+            const t = start + index * (victory ? 0.16 : 0.2);
+            const osc = pickupAudioCtx!.createOscillator();
+            const gain = pickupAudioCtx!.createGain();
+
+            osc.type = victory ? "triangle" : "sawtooth";
+            osc.frequency.setValueAtTime(frequency, t);
+
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(victory ? 0.06 : 0.045, t + 0.025);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + (victory ? 0.17 : 0.22));
+
+            osc.connect(gain);
+            gain.connect(pickupAudioCtx!.destination);
+            osc.start(t);
+            osc.stop(t + (victory ? 0.18 : 0.23));
+        });
+    } catch {
+        // Ignore audio errors silently.
+    }
+}
+
 function renderHearts(hp: number) {
     const hearts: string[] = [];
     const totalHearts = 10;
@@ -454,6 +688,26 @@ function showOverlay() {
 
 function hideOverlay() {
     controls.overlay.style.display = "none";
+}
+
+function showWinnerOverlay(winner: string) {
+    const normalizedWinner = winner.trim().toLowerCase();
+    const normalizedName = currentPlayerName.trim().toLowerCase();
+    const isYou =
+        normalizedWinner === "you" ||
+        (!!playerId && winner === playerId) ||
+        (!!normalizedName && normalizedWinner === normalizedName);
+    controls.victoryLabel.textContent = isYou ? "Victory" : "Defeat";
+    controls.victoryLabel.classList.toggle("defeat", !isYou);
+    controls.victorySubtitle.textContent = isYou
+        ? "You conquered the dragon realm."
+        : "Another champion claimed the final strike.";
+    playMatchEndTheme(isYou);
+    controls.victoryOverlay.classList.remove("hidden");
+}
+
+function hideVictoryOverlay() {
+    controls.victoryOverlay.classList.add("hidden");
 }
 
 function keyToDirection(key: string): Dir | null {
